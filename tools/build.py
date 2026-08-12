@@ -14,6 +14,7 @@
 import pathlib
 import re
 import shutil
+import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DIST = ROOT / "docs"
@@ -29,28 +30,20 @@ def minify_css(css: str) -> str:
     return css.strip()
 
 
-def minify_js(js: str) -> str:
-    """Осторожная чистка: только строки, целиком состоящие из комментария.
+def check_js(js: str) -> str:
+    """Скрипт встраивается как есть.
 
-    Полноценный минификатор здесь не нужен — файл отдаётся сжатым, а на
-    метрики Lighthouse его размер уже не влияет. Зато нет риска сломать
-    регулярку или шаблонную строку.
+    Минификатор здесь только вредил: построчная вырезка комментариев однажды
+    уже разрезала объектный литерал и уронила страницу. Размер на метрики не
+    влияет — файл всё равно едет сжатым. Если рядом есть node, проверяем,
+    что встраиваемый код вообще разбирается.
     """
-    out, in_block = [], False
-    for line in js.splitlines():
-        s = line.strip()
-        if in_block:
-            if "*/" in s:
-                in_block = False
-            continue
-        if s.startswith("/*"):
-            if "*/" not in s:
-                in_block = True
-            continue
-        if s.startswith("//") or not s:
-            continue
-        out.append(line)
-    return "\n".join(out)
+    node = shutil.which("node")
+    if node:
+        r = subprocess.run([node, "--check", "-"], input=js, text=True,
+                           capture_output=True)
+        assert r.returncode == 0, f"скрипт не разбирается:\n{r.stderr}"
+    return js
 
 
 def build() -> None:
@@ -74,7 +67,7 @@ def build() -> None:
     )
     html = html.replace(
         '<script src="js/app.js"></script>',
-        f"<script>{minify_js(js)}</script>",
+        f"<script>{check_js(js)}</script>",
     )
 
     assert "<style>" in html and "css/style.css" not in html, "стили не встроились"

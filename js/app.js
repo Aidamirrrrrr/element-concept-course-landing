@@ -77,22 +77,29 @@
     el.classList.add('is-split');
   };
 
+  /* Заголовок первого экрана разбираем сразу — он скрыт до разбора, и без
+     этого браузеру нечего рисовать. Остальные девять ждут первой отрисовки:
+     до неё каждая лишняя перестройка DOM — это пустой экран у зрителя. */
   const splitTargets = [...document.querySelectorAll('[data-split]')];
-  splitTargets.forEach(split);
+  const above = splitTargets.filter(el => el.closest('.cover'));
+  above.forEach(split);
 
   /* ─── Текст, загорающийся по мере прокрутки ────────────── */
-  const hlTargets = [...document.querySelectorAll('[data-hl]')].map(el => {
-    const frag = document.createDocumentFragment();
-    (el.textContent.match(/\S+/g) || []).forEach(word => {
-      const s = document.createElement('span');
-      s.className = 'hl';
-      s.textContent = word;
-      frag.appendChild(s);
-      frag.appendChild(document.createTextNode(' '));
+  let hlTargets = [];
+  const initHl = () => {
+    hlTargets = [...document.querySelectorAll('[data-hl]')].map(el => {
+      const frag = document.createDocumentFragment();
+      (el.textContent.match(/\S+/g) || []).forEach(word => {
+        const s = document.createElement('span');
+        s.className = 'hl';
+        s.textContent = word;
+        frag.appendChild(s);
+        frag.appendChild(document.createTextNode(' '));
+      });
+      el.replaceChildren(frag);
+      return { el, words: [...el.querySelectorAll('.hl')] };
     });
-    el.replaceChildren(frag);
-    return { el, words: [...el.querySelectorAll('.hl')] };
-  });
+  };
 
   /* ─── Одноразовые появления ────────────────────────────── */
   /* Наблюдатели заводятся не сразу, а после прелоадера: иначе всё, что
@@ -234,208 +241,228 @@
   addEventListener('scroll', onScroll, { passive: true });
   addEventListener('resize', onScroll);
 
-  /* ─── Непрерывный цикл: бегущая строка и наклон по инерции ─ */
-  const mq = document.querySelector('.mq');
-  const mqRow = mq && mq.querySelector('.mq__row');
-  const skewed = [...document.querySelectorAll('[data-skew]')];
+  /* ─── Вторая фаза ──────────────────────────────────────── */
+  /* Всё, что не нужно для первого кадра: разбор остальных заголовков,
+     наблюдатели, бегущая строка, барабаны, обработчики. Запускается после
+     первой отрисовки — до неё эта работа держала бы экран пустым. */
+  const initRest = () => {
+    splitTargets.filter(el => !above.includes(el)).forEach(split);
+    initHl();
+    startReveals();
+    startCounters();
 
-  if (!calm && (mqRow || skewed.length)) {
-    /* Строку дублируем до двойной ширины экрана и крутим по модулю половины —
-       шов не виден. Прокрутка добавляет скорость и разворачивает движение. */
-    let half = 0;
-    let fill = () => {};
-    if (mqRow) {
-      const original = [...mqRow.children].map(n => n.cloneNode(true));
-      const setW = mqRow.scrollWidth;   // ширина одного набора, меряем один раз
-      fill = () => {
-        // Считаем число копий заранее: цикл с чтением scrollWidth на каждой
-        // итерации дёргал бы пересчёт лейаута столько же раз.
-        const need = Math.max(2, Math.ceil((mq.clientWidth * 2) / setW) + 1);
-        const have = mqRow.children.length / original.length;
-        const frag = document.createDocumentFragment();
-        for (let i = have; i < need; i++) {
-          original.forEach(n => frag.appendChild(n.cloneNode(true)));
+    /* ─── Непрерывный цикл: бегущая строка и наклон по инерции ─ */
+    const mq = document.querySelector('.mq');
+    const mqRow = mq && mq.querySelector('.mq__row');
+    const skewed = [...document.querySelectorAll('[data-skew]')];
+
+    if (!calm && (mqRow || skewed.length)) {
+      /* Строку дублируем до двойной ширины экрана и крутим по модулю половины —
+         шов не виден. Прокрутка добавляет скорость и разворачивает движение. */
+      let half = 0;
+      let fill = () => {};
+      if (mqRow) {
+        const original = [...mqRow.children].map(n => n.cloneNode(true));
+        const setW = mqRow.scrollWidth;   // ширина одного набора, меряем один раз
+        fill = () => {
+          // Считаем число копий заранее: цикл с чтением scrollWidth на каждой
+          // итерации дёргал бы пересчёт лейаута столько же раз.
+          const need = Math.max(2, Math.ceil((mq.clientWidth * 2) / setW) + 1);
+          const have = mqRow.children.length / original.length;
+          const frag = document.createDocumentFragment();
+          for (let i = have; i < need; i++) {
+            original.forEach(n => frag.appendChild(n.cloneNode(true)));
+          }
+          mqRow.appendChild(frag);
+          half = mqRow.scrollWidth / 2;
+        };
+        fill();
+        addEventListener('resize', fill);
+      }
+
+      let offset = 0;
+      let boost = 0;
+      let skew = 0;
+      let prev = 0;
+      let mqOn = !!mqRow;
+      let raf = 0;
+
+      const loop = now => {
+        const dt = prev ? Math.min(now - prev, 50) : 16.7;
+        prev = now;
+        const k = dt / 16.7;
+
+        // Импульс прокрутки затухает сам: scrollVel обнуляется, как только
+        // события scroll прекращаются, а boost плавно сходит к нулю.
+        boost += (scrollVel - boost) * 0.12 * k;
+        scrollVel *= 0.86;
+
+        if (mqRow && mqOn && half) {
+          offset = (offset + (0.55 + boost * 0.5) * scrollDir * k + half) % half;
+          mqRow.style.transform = `translate3d(${-offset.toFixed(2)}px,0,0)`;
         }
-        mqRow.appendChild(frag);
-        half = mqRow.scrollWidth / 2;
+
+        if (skewed.length) {
+          const target = Math.max(-2.2, Math.min(2.2, boost * scrollDir * 0.05));
+          skew += (target - skew) * 0.15 * k;
+          const v = Math.abs(skew) < 0.01 ? 0 : skew;
+          skewed.forEach(el => el.style.setProperty('--skew', `${v.toFixed(3)}deg`));
+        }
+
+        const idle = boost < 0.05 && Math.abs(skew) < 0.01 && !mqOn;
+        raf = idle ? 0 : requestAnimationFrame(loop);
       };
-      fill();
-      addEventListener('resize', fill);
+
+      const kick = () => { if (!raf) { prev = 0; raf = requestAnimationFrame(loop); } };
+
+      if (mq && 'IntersectionObserver' in window) {
+        new IntersectionObserver(([e]) => { mqOn = e.isIntersecting; kick(); },
+          { threshold: 0 }).observe(mq);
+      }
+      addEventListener('scroll', kick, { passive: true });
+      kick();
     }
 
-    let offset = 0;
-    let boost = 0;
-    let skew = 0;
-    let prev = 0;
-    let mqOn = !!mqRow;
-    let raf = 0;
+    /* ─── Магнитные кнопки ─────────────────────────────────── */
+    if (fine && !calm) {
+      document.querySelectorAll('[data-mag]').forEach(el => {
+        let raf = 0, tx = 0, ty = 0, cx = 0, cy = 0;
+        const run = () => {
+          cx = lerp(cx, tx, 0.18);
+          cy = lerp(cy, ty, 0.18);
+          el.style.transform = `translate3d(${cx.toFixed(2)}px,${cy.toFixed(2)}px,0)`;
+          raf = Math.abs(cx - tx) > 0.1 || Math.abs(cy - ty) > 0.1 ? requestAnimationFrame(run) : 0;
+        };
+        const kick = () => { if (!raf) raf = requestAnimationFrame(run); };
 
-    const loop = now => {
-      const dt = prev ? Math.min(now - prev, 50) : 16.7;
-      prev = now;
-      const k = dt / 16.7;
-
-      // Импульс прокрутки затухает сам: scrollVel обнуляется, как только
-      // события scroll прекращаются, а boost плавно сходит к нулю.
-      boost += (scrollVel - boost) * 0.12 * k;
-      scrollVel *= 0.86;
-
-      if (mqRow && mqOn && half) {
-        offset = (offset + (0.55 + boost * 0.5) * scrollDir * k + half) % half;
-        mqRow.style.transform = `translate3d(${-offset.toFixed(2)}px,0,0)`;
-      }
-
-      if (skewed.length) {
-        const target = Math.max(-2.2, Math.min(2.2, boost * scrollDir * 0.05));
-        skew += (target - skew) * 0.15 * k;
-        const v = Math.abs(skew) < 0.01 ? 0 : skew;
-        skewed.forEach(el => el.style.setProperty('--skew', `${v.toFixed(3)}deg`));
-      }
-
-      const idle = boost < 0.05 && Math.abs(skew) < 0.01 && !mqOn;
-      raf = idle ? 0 : requestAnimationFrame(loop);
-    };
-
-    const kick = () => { if (!raf) { prev = 0; raf = requestAnimationFrame(loop); } };
-
-    if (mq && 'IntersectionObserver' in window) {
-      new IntersectionObserver(([e]) => { mqOn = e.isIntersecting; kick(); },
-        { threshold: 0 }).observe(mq);
+        el.addEventListener('pointermove', e => {
+          const r = el.getBoundingClientRect();
+          tx = (e.clientX - (r.left + r.width / 2)) * 0.22;
+          ty = (e.clientY - (r.top + r.height / 2)) * 0.32;
+          kick();
+        });
+        el.addEventListener('pointerleave', () => { tx = 0; ty = 0; kick(); });
+      });
     }
-    addEventListener('scroll', kick, { passive: true });
-    kick();
-  }
 
-  /* ─── Магнитные кнопки ─────────────────────────────────── */
-  if (fine && !calm) {
-    document.querySelectorAll('[data-mag]').forEach(el => {
-      let raf = 0, tx = 0, ty = 0, cx = 0, cy = 0;
-      const run = () => {
-        cx = lerp(cx, tx, 0.18);
-        cy = lerp(cy, ty, 0.18);
-        el.style.transform = `translate3d(${cx.toFixed(2)}px,${cy.toFixed(2)}px,0)`;
-        raf = Math.abs(cx - tx) > 0.1 || Math.abs(cy - ty) > 0.1 ? requestAnimationFrame(run) : 0;
-      };
-      const kick = () => { if (!raf) raf = requestAnimationFrame(run); };
-
-      el.addEventListener('pointermove', e => {
-        const r = el.getBoundingClientRect();
-        tx = (e.clientX - (r.left + r.width / 2)) * 0.22;
-        ty = (e.clientY - (r.top + r.height / 2)) * 0.32;
-        kick();
+    /* ─── Наклон карточек за указателем ────────────────────── */
+    if (fine && !calm) {
+      document.querySelectorAll('[data-tilt]').forEach(el => {
+        const set = (rx, ry) => {
+          el.style.setProperty('--rx', `${rx.toFixed(2)}deg`);
+          el.style.setProperty('--ry', `${ry.toFixed(2)}deg`);
+        };
+        el.addEventListener('pointermove', e => {
+          const r = el.getBoundingClientRect();
+          // −1…1 от центра карточки по каждой оси
+          set(((r.top + r.height / 2 - e.clientY) / r.height) * 2.6,
+              ((e.clientX - r.left - r.width / 2) / r.width) * 2.6);
+        });
+        el.addEventListener('pointerleave', () => set(0, 0));
       });
-      el.addEventListener('pointerleave', () => { tx = 0; ty = 0; kick(); });
-    });
-  }
+    }
 
-  /* ─── Наклон карточек за указателем ────────────────────── */
-  if (fine && !calm) {
-    document.querySelectorAll('[data-tilt]').forEach(el => {
-      const set = (rx, ry) => {
-        el.style.setProperty('--rx', `${rx.toFixed(2)}deg`);
-        el.style.setProperty('--ry', `${ry.toFixed(2)}deg`);
-      };
-      el.addEventListener('pointermove', e => {
-        const r = el.getBoundingClientRect();
-        // −1…1 от центра карточки по каждой оси
-        set(((r.top + r.height / 2 - e.clientY) / r.height) * 2.6,
-            ((e.clientX - r.left - r.width / 2) / r.width) * 2.6);
+    /* ─── Барабаны разрядов в цене ─────────────────────────── */
+    /* Каждая цифра — вертикальная лента 0…9, которая доезжает до нужной.
+       Ширина ленты фиксирована табличными цифрами, поэтому вёрстка не прыгает. */
+    const reel = document.querySelector('[data-reel]');
+    if (reel) {
+      const digits = [...reel.dataset.reel];
+      reel.textContent = '';
+      reel.setAttribute('aria-label', reel.dataset.reelLabel || reel.dataset.reel);
+
+      const cells = digits.map((ch, i) => {
+        if (!/\d/.test(ch)) {
+          const gap = document.createElement('i');
+          gap.className = 'reel__gap';
+          gap.textContent = ch === ' ' ? ' ' : ch;
+          reel.appendChild(gap);
+          return null;
+        }
+        const cell = document.createElement('i');
+        cell.className = 'reel__d';
+        const strip = document.createElement('b');
+        // Две ленты подряд: цель value+10 — это полный оборот и лишь потом цифра.
+        strip.textContent = '01234567890123456789'.split('').join('\n');
+        cell.appendChild(strip);
+        cell.style.setProperty('--wd', `${i * 45}ms`);
+        reel.appendChild(cell);
+        return { strip, value: +ch };
+      }).filter(Boolean);
+
+      const spin = () => cells.forEach(({ strip, value }) => {
+        strip.style.setProperty('--to', calm ? value : value + 10);
       });
-      el.addEventListener('pointerleave', () => set(0, 0));
-    });
-  }
 
-  /* ─── Барабаны разрядов в цене ─────────────────────────── */
-  /* Каждая цифра — вертикальная лента 0…9, которая доезжает до нужной.
-     Ширина ленты фиксирована табличными цифрами, поэтому вёрстка не прыгает. */
-  const reel = document.querySelector('[data-reel]');
-  if (reel) {
-    const digits = [...reel.dataset.reel];
-    reel.textContent = '';
-    reel.setAttribute('aria-label', reel.dataset.reelLabel || reel.dataset.reel);
-
-    const cells = digits.map((ch, i) => {
-      if (!/\d/.test(ch)) {
-        const gap = document.createElement('i');
-        gap.className = 'reel__gap';
-        gap.textContent = ch === ' ' ? ' ' : ch;
-        reel.appendChild(gap);
-        return null;
-      }
-      const cell = document.createElement('i');
-      cell.className = 'reel__d';
-      const strip = document.createElement('b');
-      // Две ленты подряд: цель value+10 — это полный оборот и лишь потом цифра.
-      strip.textContent = '01234567890123456789'.split('').join('\n');
-      cell.appendChild(strip);
-      cell.style.setProperty('--wd', `${i * 45}ms`);
-      reel.appendChild(cell);
-      return { strip, value: +ch };
-    }).filter(Boolean);
-
-    const spin = () => cells.forEach(({ strip, value }) => {
-      strip.style.setProperty('--to', calm ? value : value + 10);
-    });
-
-    if ('IntersectionObserver' in window) {
-      const io = new IntersectionObserver(([e], obs) => {
-        if (!e.isIntersecting) return;
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver(([e], obs) => {
+          if (!e.isIntersecting) return;
+          spin();
+          obs.disconnect();
+        }, { threshold: 0.5 });
+        io.observe(reel);
+      } else {
         spin();
-        obs.disconnect();
-      }, { threshold: 0.5 });
-      io.observe(reel);
-    } else {
-      spin();
+      }
     }
-  }
 
-  /* ─── Вопросы ──────────────────────────────────────────── */
-  document.querySelectorAll('.qa__bar').forEach(b => {
-    b.addEventListener('click', () => {
-      const open = b.closest('.qa').classList.toggle('is-open');
-      b.setAttribute('aria-expanded', String(open));
+    /* ─── Вопросы ──────────────────────────────────────────── */
+    document.querySelectorAll('.qa__bar').forEach(b => {
+      b.addEventListener('click', () => {
+        const open = b.closest('.qa').classList.toggle('is-open');
+        b.setAttribute('aria-expanded', String(open));
+      });
     });
-  });
 
-  /* ─── Мобильное меню ───────────────────────────────────── */
-  const burger = document.querySelector('.burger');
-  const menu = document.getElementById('menu');
-  if (burger && menu) {
-    const setMenu = open => {
-      menu.hidden = !open;
-      burger.setAttribute('aria-expanded', String(open));
-    };
-    burger.addEventListener('click', () => setMenu(menu.hidden));
-    menu.addEventListener('click', e => { if (e.target.tagName === 'A') setMenu(false); });
-    addEventListener('resize', () => { if (innerWidth > 900) setMenu(false); });
-  }
+    /* ─── Мобильное меню ───────────────────────────────────── */
+    const burger = document.querySelector('.burger');
+    const menu = document.getElementById('menu');
+    if (burger && menu) {
+      const setMenu = open => {
+        menu.hidden = !open;
+        burger.setAttribute('aria-expanded', String(open));
+      };
+      burger.addEventListener('click', () => setMenu(menu.hidden));
+      menu.addEventListener('click', e => { if (e.target.tagName === 'A') setMenu(false); });
+      addEventListener('resize', () => { if (innerWidth > 900) setMenu(false); });
+    }
 
-  /* ─── Липкая полоса с ценой ────────────────────────────── */
-  const dock = document.querySelector('.dock');
-  const cover = document.querySelector('.cover');
-  const form = document.getElementById('form');
-  if (dock && cover && form && 'IntersectionObserver' in window) {
-    dock.hidden = false;
-    const state = { past: false, atForm: false };
-    const sync = () => dock.classList.toggle('is-on', state.past && !state.atForm);
-    new IntersectionObserver(([e]) => {
-      state.past = !e.isIntersecting && e.boundingClientRect.top < 0;
-      sync();
-    }, { threshold: 0 }).observe(cover);
-    new IntersectionObserver(([e]) => {
-      state.atForm = e.isIntersecting;
-      sync();
-    }, { threshold: 0 }).observe(form);
-  }
+    /* ─── Липкая полоса с ценой ────────────────────────────── */
+    const dock = document.querySelector('.dock');
+    const cover = document.querySelector('.cover');
+    const form = document.getElementById('form');
+    if (dock && cover && form && 'IntersectionObserver' in window) {
+      dock.hidden = false;
+      const state = { past: false, atForm: false };
+      const sync = () => dock.classList.toggle('is-on', state.past && !state.atForm);
+      new IntersectionObserver(([e]) => {
+        state.past = !e.isIntersecting && e.boundingClientRect.top < 0;
+        sync();
+      }, { threshold: 0 }).observe(cover);
+      new IntersectionObserver(([e]) => {
+        state.atForm = e.isIntersecting;
+        sync();
+      }, { threshold: 0 }).observe(form);
+    }
 
-  /* ─── Старт ──────────────────────────────────────────── */
-  /* Первый экран заводим сразу же: он не должен ждать прокрутки. Отдельного
-     кадра-заглушки нет намеренно — пустой экран стоит Speed Index. */
-  onScroll();
-  startReveals();
-  startCounters();
-  requestAnimationFrame(() => {
+    onScroll();
+  };
+
+  /* Первый экран заводим сразу, остальное — следующим кадром.
+     Таймер продублирован не зря: в фоновой вкладке requestAnimationFrame не
+     вызывается вовсе, и без него страница осталась бы неинициализированной. */
+  const once = fn => { let done = false; return () => { if (!done) { done = true; fn(); } }; };
+
+  const showCover = once(() => {
     document.querySelectorAll('.cover .rv, .cover .mask, .cover [data-split]')
       .forEach(el => el.classList.add('is-in'));
   });
+  const startRest = once(initRest);
+
+  requestAnimationFrame(() => {
+    showCover();
+    requestAnimationFrame(() => setTimeout(startRest, 0));
+  });
+  setTimeout(showCover, 120);
+  setTimeout(startRest, 400);
 })();
