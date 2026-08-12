@@ -54,7 +54,7 @@
             wrap.className = 'w';
             const inner = document.createElement('i');
             inner.textContent = ch;
-            inner.style.setProperty('--wd', `${n++ * 17}ms`);
+            inner.style.setProperty('--wd', `${n++ * 9}ms`);
             wrap.appendChild(inner);
             group.appendChild(wrap);
           });

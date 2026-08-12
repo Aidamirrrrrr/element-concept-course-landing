@@ -101,6 +101,10 @@ section[id]{scroll-margin-top:var(--bar-h)}
 .w>i{display:inline-block;font-style:normal;transform:translateY(115%);
   transition:transform .66s var(--ease-mask);transition-delay:var(--wd)}
 [data-split].is-in .w>i{transform:none}
+/* Первый экран выезжает заметно быстрее остальных: пока он доигрывает,
+   вьюпорт считается незаполненным, и это прямо бьёт по Speed Index. */
+.cover [data-split] .w>i{transition-duration:.34s}
+.cover .rv{transition-duration:.4s}
 html.js [data-split]:not(.is-split){visibility:hidden}
 
 /* Лёгкий наклон по инерции прокрутки — значение пишет скрипт. */
