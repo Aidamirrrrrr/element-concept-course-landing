@@ -21,8 +21,8 @@
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2317191A'/%3E%3Cpath d='M16 27V9' stroke='%235C6B4E' stroke-width='1.6' fill='none'/%3E%3Cpath d='M16 18c-6-1-8-6-7-10 4 1 6 5 7 9z' stroke='%235C6B4E' stroke-width='1.4' fill='none'/%3E%3Ccircle cx='16' cy='8' r='3.4' stroke='%239E2B20' stroke-width='1.6' fill='none'/%3E%3C/svg%3E">
 
-<link rel="preload" href="fonts/manrope-700-800-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/manrope-400-600-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/manrope-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/manrope-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 
@@ -136,7 +136,7 @@
 <main id="main">
 
 <!-- ─── 1. Обложка ────────────────────────────────────── -->
-<section class="cover" id="top">
+<section class="cover" id="top" aria-label="Курс интерьерной флористики">
   <div class="wrap cover__top">
     <p class="tag rv">Курс · Набор в группу открыт</p>
 
@@ -201,11 +201,11 @@
       <p class="tag rv">Для кого</p>
       <h2 class="h2" data-split>кому подойдёт<br>курс флористики</h2>
     </header>
-    <ul class="who__list">
-      <li class="rv"><b>Хочу живые цветы дома постоянно</b><span>Но не понимаю, что покупать, во что ставить и почему через два дня всё вянет.</span></li>
-      <li class="rv" style="--i:1"><b>Делаю ремонт или обновляю интерьер</b><span>Нужен последний слой — флористика и декор, которые собирают пространство.</span></li>
-      <li class="rv" style="--i:2"><b>Часто принимаю гостей</b><span>Хочу сервировку и сет-дизайн уровня ресторана, но в своей квартире.</span></li>
-      <li class="rv" style="--i:3"><b>Ищу спокойное занятие руками</b><span>Четыре воскресенья в камерной группе вместо курса на 40 человек.</span></li>
+    <ul class="who__list" role="list">
+      <li class="rv" data-tilt><b>Хочу живые цветы дома постоянно</b><span>Но не понимаю, что покупать, во что ставить и почему через два дня всё вянет.</span></li>
+      <li class="rv" style="--i:1" data-tilt><b>Делаю ремонт или обновляю интерьер</b><span>Нужен последний слой — флористика и декор, которые собирают пространство.</span></li>
+      <li class="rv" style="--i:2" data-tilt><b>Часто принимаю гостей</b><span>Хочу сервировку и сет-дизайн уровня ресторана, но в своей квартире.</span></li>
+      <li class="rv" style="--i:3" data-tilt><b>Ищу спокойное занятие руками</b><span>Четыре воскресенья в камерной группе вместо курса на 40 человек.</span></li>
     </ul>
   </div>
 </section>
@@ -219,14 +219,14 @@
       <p class="head__note rv">Каждое занятие интерьерной флористики — теория и сразу практика. Всё, что соберёте руками, уезжает с вами.</p>
     </header>
 
-    <ol class="weeks">
+    <ol class="weeks" role="list">
 
-      <li class="wk rv">
+      <li class="wk rv" style="--n:0">
         <div class="wk__rail" data-par-y="-44"><span class="wk__no">01</span></div>
         <div class="wk__card">
           <p class="wk__kicker">Вводное занятие</p>
           <h3 class="wk__t">знакомство с интерьерной флористикой</h3>
-          <ul class="wk__list">
+          <ul class="wk__list" role="list">
             <li>Что такое интерьерная и домашняя флористика</li>
             <li>Базовые наборы для интерьерной флористики</li>
             <li>Как правильно выбрать цветы для дома</li>
@@ -241,12 +241,12 @@
         </figure>
       </li>
 
-      <li class="wk rv">
+      <li class="wk rv" style="--n:1">
         <div class="wk__rail" data-par-y="-44"><span class="wk__no">02</span></div>
         <div class="wk__card">
           <p class="wk__kicker">Теория + практика</p>
           <h3 class="wk__t">вазы, зонирование, монокомпозиция</h3>
-          <ul class="wk__list">
+          <ul class="wk__list" role="list">
             <li>Виды интерьерных ваз</li>
             <li>Зонирование пространства интерьерной флористикой</li>
             <li>Парные вазы</li>
@@ -261,12 +261,12 @@
         </figure>
       </li>
 
-      <li class="wk rv">
+      <li class="wk rv" style="--n:2">
         <div class="wk__rail" data-par-y="-44"><span class="wk__no">03</span></div>
         <div class="wk__card">
           <p class="wk__kicker">Урок-практика</p>
           <h3 class="wk__t">текстура и фактура. две композиции</h3>
-          <ul class="wk__list">
+          <ul class="wk__list" role="list">
             <li>Как сочетать между собой текстуру и фактуру</li>
             <li>Базовая интерьерная композиция — то, что работает всегда</li>
             <li>Арт-интерьерная композиция — как в бутиках</li>
@@ -279,12 +279,12 @@
         </figure>
       </li>
 
-      <li class="wk rv">
+      <li class="wk rv" style="--n:3">
         <div class="wk__rail" data-par-y="-44"><span class="wk__no">04</span></div>
         <div class="wk__card">
           <p class="wk__kicker">Финальное занятие</p>
           <h3 class="wk__t">сет-дизайн и сервировка стола</h3>
-          <ul class="wk__list">
+          <ul class="wk__list" role="list">
             <li>Сет-дизайн и сервировка: как это устроено</li>
             <li>Как преобразить домашнюю сервировку</li>
             <li>Чем дополнить сервировку, чтобы она стала особенной</li>
@@ -320,22 +320,22 @@
         <figure class="kit__pic mask">
           <picture><img src="img/ph/kit-materials.svg" alt="Раздаточный материал курса: рабочая тетрадь, ручки и чек-листы" width="1000" height="500" loading="lazy" decoding="async"></picture>
         </figure>
-        <ul class="chips"><li>Рабочая тетрадь</li><li>Ручки</li><li>Чек-листы</li></ul>
+        <ul class="chips" role="list"><li>Рабочая тетрадь</li><li>Ручки</li><li>Чек-листы</li></ul>
       </article>
 
-      <article class="kit__i rv" style="--i:1">
+      <article class="kit__i rv" style="--i:1" data-tilt>
         <p class="kit__no">02</p><h3>презентация</h3>
         <p>Визуальная часть к каждому занятию: разборы, примеры, сравнения «до / после».</p>
       </article>
-      <article class="kit__i rv" style="--i:2">
+      <article class="kit__i rv" style="--i:2" data-tilt>
         <p class="kit__no">03</p><h3>чем вдохновляться</h3>
         <p>Подборка студий, брендов, интерьеров и сет-дизайнеров, за которыми стоит следить.</p>
       </article>
-      <article class="kit__i rv" style="--i:3">
+      <article class="kit__i rv" style="--i:3" data-tilt>
         <p class="kit__no">04</p><h3>цветы и вазы</h3>
         <p>Всё для практики на каждом занятии — сезонные цветы, интерьерные вазы, инструменты.</p>
       </article>
-      <article class="kit__i rv" style="--i:4">
+      <article class="kit__i rv" style="--i:4" data-tilt>
         <p class="kit__no">05</p><h3>композиции с собой</h3>
         <p>Всё, что собираете руками, уезжает домой вместе с вами.</p>
       </article>
@@ -344,7 +344,7 @@
 </section>
 
 <!-- ─── 6. Работы ─────────────────────────────────────── -->
-<section class="works" id="works" data-skew>
+<section class="works" id="works" data-skew aria-label="Работы участниц">
   <div class="wrap">
     <header class="head">
       <p class="tag rv">Работы участниц</p>
@@ -355,7 +355,7 @@
         <picture><img src="img/ph/work-01.svg" alt="Монокомпозиция, собранная участницей курса интерьерной флористики" width="800" height="800" loading="lazy" decoding="async"></picture>
         <figcaption>Монокомпозиция · урок 02</figcaption>
       </figure>
-      <figure class="work mask" data-par="0.4" data-par-zoom="0.4">
+      <figure class="work mask mask--side" data-par="0.4" data-par-zoom="0.4">
         <picture><img src="img/ph/work-02.svg" alt="Базовая интерьерная композиция из живых цветов" width="800" height="800" loading="lazy" decoding="async"></picture>
         <figcaption>Базовая композиция · урок 03</figcaption>
       </figure>
@@ -374,7 +374,7 @@
       <p class="tag rv">Результат</p>
       <h2 class="h2" data-split>чему вы научитесь</h2>
     </header>
-    <ul class="res__list">
+    <ul class="res__list" role="list">
       <li class="rv"><span>01</span>Понимаете, какие цветы брать для дома и как они себя поведут</li>
       <li class="rv" style="--i:1"><span>02</span>Продлеваете жизнь букета — по каждому цветку отдельно</li>
       <li class="rv" style="--i:2"><span>03</span>Видите, что с чем сочетается, а что вместе ставить нельзя</li>
@@ -386,9 +386,9 @@
 </section>
 
 <!-- ─── 8. Преподаватель ──────────────────────────────── -->
-<section class="tut" id="tutor">
+<section class="tut" id="tutor" aria-label="Кто ведёт курс">
   <div class="wrap tut__in">
-    <figure class="tut__img mask" data-par="0.3">
+    <figure class="tut__img mask mask--side" data-par="0.3">
       <picture><img src="img/ph/teacher.svg" alt="Преподаватель курса интерьерной флористики Element Concept" width="900" height="1150" loading="lazy" decoding="async"></picture>
     </figure>
     <div class="tut__txt" data-par-y="-34">
@@ -398,10 +398,10 @@
         Курс ведёт основатель студии — практикующий флорист и сет-дизайнер.
         <mark>Здесь будет имя преподавателя, опыт и пара проектов для доверия — впишите свой текст.</mark>
       </p>
-      <ul class="tut__facts">
-        <li class="rv"><b>Интерьерная флористика</b><span>Композиции для квартир, шоурумов и бутиков</span></li>
-        <li class="rv" style="--i:1"><b>Сет-дизайн</b><span>Сервировки для приёмов, ужинов и съёмок</span></li>
-        <li class="rv" style="--i:2"><b>Камерный формат</b><span>Группы 6—8 человек, разбор работы каждого</span></li>
+      <ul class="tut__facts" role="list">
+        <li class="rv" data-tilt><b>Интерьерная флористика</b><span>Композиции для квартир, шоурумов и бутиков</span></li>
+        <li class="rv" style="--i:1" data-tilt><b>Сет-дизайн</b><span>Сервировки для приёмов, ужинов и съёмок</span></li>
+        <li class="rv" style="--i:2" data-tilt><b>Камерный формат</b><span>Группы 6—8 человек, разбор работы каждого</span></li>
       </ul>
     </div>
   </div>
@@ -417,14 +417,14 @@
     <div class="tick rv">
       <div class="tick__l">
         <p class="tick__kick">Курс целиком</p>
-        <p class="tick__n"><span data-count="60000" data-group>0</span><i>₽</i></p>
+        <p class="tick__n"><span class="reel" data-reel="60 000" data-reel-label="60 000 рублей" role="text"></span><i>₽</i></p>
         <p class="tick__sub">4 занятия · 1 месяц · группа 6—8 человек</p>
         <a class="btn btn--big" href="#form" data-mag>
           Забронировать место
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
         </a>
       </div>
-      <ul class="tick__r">
+      <ul class="tick__r" role="list">
         <li>4 занятия по 2,5—3 часа</li>
         <li>Рабочая тетрадь и ручки</li>
         <li>Презентация к каждому уроку</li>

@@ -37,7 +37,7 @@
         const wrap = document.createElement('span');
         wrap.className = block ? 'w w--b' : 'w';
         const inner = document.createElement('i');
-        inner.style.setProperty('--wd', `${n++ * 55}ms`);
+        inner.style.setProperty('--wd', `${n++ * 42}ms`);
         inner.appendChild(node.cloneNode(true));
         wrap.appendChild(inner);
         out.appendChild(wrap);
@@ -55,7 +55,7 @@
             wrap.className = 'w';
             const inner = document.createElement('i');
             inner.textContent = ch;
-            inner.style.setProperty('--wd', `${n++ * 26}ms`);
+            inner.style.setProperty('--wd', `${n++ * 17}ms`);
             wrap.appendChild(inner);
             group.appendChild(wrap);
           });
@@ -67,7 +67,7 @@
         wrap.className = 'w';
         const inner = document.createElement('i');
         inner.textContent = word;
-        inner.style.setProperty('--wd', `${n++ * 55}ms`);
+        inner.style.setProperty('--wd', `${n++ * 42}ms`);
         wrap.appendChild(inner);
         out.appendChild(wrap);
         out.appendChild(document.createTextNode(' '));
@@ -150,7 +150,9 @@
   };
 
   /* ─── Общий цикл прокрутки ─────────────────────────────── */
-  const progress = document.querySelector('.prog-line i');
+  // Полосу прогресса ведёт CSS scroll-таймлайн, если он поддерживается.
+  const cssTimeline = CSS.supports('animation-timeline', 'scroll()');
+  const progress = cssTimeline ? null : document.querySelector('.prog-line i');
   const bar = document.querySelector('.bar');
   /* Параллакс двигаем на <img> через --py, а шторка кадра живёт на <picture>:
      так две анимации не спорят за одно свойство transform. */
@@ -194,26 +196,35 @@
     }
     lastY = y;
 
-    if (!calm) {
-      parallax.forEach(({ el, img, amount }) => {
-        const r = el.getBoundingClientRect();
-        if (r.bottom < -200 || r.top > vh + 200) return;
-        // -1 над экраном … +1 под экраном; сдвиг вдвое меньше запаса масштаба
-        const p = (r.top + r.height / 2 - vh / 2) / (vh / 2 + r.height / 2);
-        img.style.setProperty('--py', `${(p * amount * r.height * 0.5).toFixed(1)}px`);
-      });
+    if (calm) return;
 
-      hlTargets.forEach(({ el, words }) => {
-        const r = el.getBoundingClientRect();
-        if (r.bottom < 0 || r.top > vh) return;
-        // Прогресс — пока блок идёт от нижней трети к верхней трети экрана.
-        const p = clamp01((vh * 0.78 - r.top) / (vh * 0.5 + r.height * 0.5));
-        const reach = p * (words.length + 6);
-        words.forEach((w, i) => {
-          w.style.setProperty('--o', clamp01((reach - i) / 5).toFixed(3));
-        });
+    /* Сначала читаем всю геометрию, потом пишем стили: чередование чтения
+       и записи заставляет браузер пересчитывать лейаут на каждой итерации. */
+    const writes = [];
+
+    parallax.forEach(({ el, img, amount }) => {
+      const r = el.getBoundingClientRect();
+      if (r.bottom < -200 || r.top > vh + 200) return;
+      // -1 над экраном … +1 под экраном; сдвиг вдвое меньше запаса масштаба
+      const p = (r.top + r.height / 2 - vh / 2) / (vh / 2 + r.height / 2);
+      const py = `${(p * amount * r.height * 0.5).toFixed(1)}px`;
+      writes.push(() => img.style.setProperty('--py', py));
+    });
+
+    hlTargets.forEach(({ el, words }) => {
+      const r = el.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > vh) return;
+      // Прогресс — пока блок идёт от нижней трети к верхней трети экрана.
+      const p = clamp01((vh * 0.78 - r.top) / (vh * 0.5 + r.height * 0.5));
+      const reach = p * (words.length + 6);
+      words.forEach((w, i) => {
+        // Ниже .45 не опускаемся: это порог читаемости на тёмном фоне.
+        const o = (0.45 + 0.55 * clamp01((reach - i) / 5)).toFixed(3);
+        writes.push(() => w.style.setProperty('--o', o));
       });
-    }
+    });
+
+    writes.forEach(fn => fn());
   };
 
   const onScroll = () => {
@@ -236,10 +247,17 @@
     let fill = () => {};
     if (mqRow) {
       const original = [...mqRow.children].map(n => n.cloneNode(true));
+      const setW = mqRow.scrollWidth;   // ширина одного набора, меряем один раз
       fill = () => {
-        while (mqRow.scrollWidth < mq.clientWidth * 2) {
-          original.forEach(n => mqRow.appendChild(n.cloneNode(true)));
+        // Считаем число копий заранее: цикл с чтением scrollWidth на каждой
+        // итерации дёргал бы пересчёт лейаута столько же раз.
+        const need = Math.max(2, Math.ceil((mq.clientWidth * 2) / setW) + 1);
+        const have = mqRow.children.length / original.length;
+        const frag = document.createDocumentFragment();
+        for (let i = have; i < need; i++) {
+          original.forEach(n => frag.appendChild(n.cloneNode(true)));
         }
+        mqRow.appendChild(frag);
         half = mqRow.scrollWidth / 2;
       };
       fill();
@@ -311,6 +329,67 @@
     });
   }
 
+  /* ─── Наклон карточек за указателем ────────────────────── */
+  if (fine && !calm) {
+    document.querySelectorAll('[data-tilt]').forEach(el => {
+      const set = (rx, ry) => {
+        el.style.setProperty('--rx', `${rx.toFixed(2)}deg`);
+        el.style.setProperty('--ry', `${ry.toFixed(2)}deg`);
+      };
+      el.addEventListener('pointermove', e => {
+        const r = el.getBoundingClientRect();
+        // −1…1 от центра карточки по каждой оси
+        set(((r.top + r.height / 2 - e.clientY) / r.height) * 2.6,
+            ((e.clientX - r.left - r.width / 2) / r.width) * 2.6);
+      });
+      el.addEventListener('pointerleave', () => set(0, 0));
+    });
+  }
+
+  /* ─── Барабаны разрядов в цене ─────────────────────────── */
+  /* Каждая цифра — вертикальная лента 0…9, которая доезжает до нужной.
+     Ширина ленты фиксирована табличными цифрами, поэтому вёрстка не прыгает. */
+  const reel = document.querySelector('[data-reel]');
+  if (reel) {
+    const digits = [...reel.dataset.reel];
+    reel.textContent = '';
+    reel.setAttribute('aria-label', reel.dataset.reelLabel || reel.dataset.reel);
+
+    const cells = digits.map((ch, i) => {
+      if (!/\d/.test(ch)) {
+        const gap = document.createElement('i');
+        gap.className = 'reel__gap';
+        gap.textContent = ch === ' ' ? ' ' : ch;
+        reel.appendChild(gap);
+        return null;
+      }
+      const cell = document.createElement('i');
+      cell.className = 'reel__d';
+      const strip = document.createElement('b');
+      // Две ленты подряд: цель value+10 — это полный оборот и лишь потом цифра.
+      strip.textContent = '01234567890123456789'.split('').join('\n');
+      cell.appendChild(strip);
+      cell.style.setProperty('--wd', `${i * 45}ms`);
+      reel.appendChild(cell);
+      return { strip, value: +ch };
+    }).filter(Boolean);
+
+    const spin = () => cells.forEach(({ strip, value }) => {
+      strip.style.setProperty('--to', calm ? value : value + 10);
+    });
+
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(([e], obs) => {
+        if (!e.isIntersecting) return;
+        spin();
+        obs.disconnect();
+      }, { threshold: 0.5 });
+      io.observe(reel);
+    } else {
+      spin();
+    }
+  }
+
   /* ─── Вопросы ──────────────────────────────────────────── */
   document.querySelectorAll('.qa__bar').forEach(b => {
     b.addEventListener('click', () => {
@@ -376,7 +455,9 @@
     requestAnimationFrame(() => load.classList.add('is-boot'));
 
     const t0 = performance.now();
-    const DUR = 1250;
+    // Короткая шторка: каждая лишняя доля секунды — это пустой экран,
+    // который Lighthouse честно считает в Speed Index.
+    const DUR = 520;
     const step = now => {
       const p = clamp01((now - t0) / DUR);
       const e = 1 - Math.pow(1 - p, 3);

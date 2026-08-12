@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://aidamirrrrrr.github.io/element-concept-course-landing/sitemap.xml
