@@ -61,21 +61,23 @@ html.is-loading,html.is-loading body{overflow:hidden}
   text-transform:uppercase;color:var(--red)}
 
 /* ─── 3. Прелоадер ──────────────────────────────────────── */
-.load{position:fixed;inset:0;z-index:200;background:var(--ink);color:var(--bone);
+/* Шторка на цвете страницы, а не на тёмном: пока она поднимается, экран уже
+   почти совпадает с финальным кадром — Speed Index считает разницу кадров.
+   Логотип виден с первой отрисовки, анимируется только сдвиг. */
+.load{position:fixed;inset:0;z-index:200;background:var(--bone);color:var(--ink);
   display:grid;place-items:center;
-  clip-path:inset(0 0 0 0);transition:clip-path .62s var(--ease-mask)}
+  clip-path:inset(0 0 0 0);transition:clip-path .55s var(--ease-mask)}
 .load.is-done{clip-path:inset(0 0 100% 0);pointer-events:none}
 .load__in{width:min(520px,72vw);text-align:center}
 .load__mark{font-weight:800;font-size:clamp(20px,3vw,34px);letter-spacing:-.035em;
   text-transform:lowercase;
-  opacity:0;transform:translateY(10px);
-  transition:opacity .3s ease,transform .38s var(--ease)}
-.load.is-boot .load__mark{opacity:1;transform:none}
-.load__bar{height:1px;background:var(--ink-line);margin:22px 0 12px;overflow:hidden}
-.load__bar i{display:block;height:100%;background:var(--bone);
+  transform:translateY(8px);transition:transform .34s var(--ease)}
+.load.is-boot .load__mark{transform:none}
+.load__bar{height:1px;background:var(--line);margin:22px 0 12px;overflow:hidden}
+.load__bar i{display:block;height:100%;background:var(--red);
   transform:scaleX(0);transform-origin:0 50%}
 .load__num{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;
-  color:var(--ink-mute);font-variant-numeric:tabular-nums}
+  color:var(--muted);font-variant-numeric:tabular-nums}
 
 /* ─── 4. Линия прогресса чтения ─────────────────────────── */
 .prog-line{position:fixed;inset:0 0 auto;height:2px;z-index:90;pointer-events:none}

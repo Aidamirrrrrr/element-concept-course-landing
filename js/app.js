@@ -457,7 +457,7 @@
     const t0 = performance.now();
     // Короткая шторка: каждая лишняя доля секунды — это пустой экран,
     // который Lighthouse честно считает в Speed Index.
-    const DUR = 520;
+    const DUR = 420;
     const step = now => {
       const p = clamp01((now - t0) / DUR);
       const e = 1 - Math.pow(1 - p, 3);
