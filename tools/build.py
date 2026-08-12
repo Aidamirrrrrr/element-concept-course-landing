@@ -64,6 +64,10 @@ def build() -> None:
     js = (ROOT / "js" / "app.js").read_text(encoding="utf-8")
     html = (ROOT / "index.html").read_text(encoding="utf-8")
 
+    # Пути в css/ записаны относительно самой папки css/. После встраивания
+    # в index.html «../fonts/» уводит на уровень выше сайта — на Pages это 404.
+    css = css.replace("../fonts/", "fonts/")
+
     html = html.replace(
         '<link rel="stylesheet" href="css/fonts.css">\n<link rel="stylesheet" href="css/style.css">',
         f"<style>{minify_css(css)}</style>",
@@ -75,6 +79,11 @@ def build() -> None:
 
     assert "<style>" in html and "css/style.css" not in html, "стили не встроились"
     assert "js/app.js" not in html, "скрипт не встроился"
+    # Сайт живёт в подкаталоге, любой путь вверх из index.html выведет за него.
+    assert "../" not in html, "во встроенном коде остался путь на уровень выше"
+
+    for name in re.findall(r"url\((?:'|\")?([^)'\"]+\.woff2)", html):
+        assert (DIST.parent / name).exists(), f"шрифт не найден: {name}"
 
     (DIST / "index.html").write_text(html, encoding="utf-8")
     (DIST / ".nojekyll").write_text("", encoding="utf-8")
