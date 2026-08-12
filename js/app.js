@@ -6,7 +6,6 @@
 (() => {
   'use strict';
 
-  const root = document.documentElement;
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -429,46 +428,14 @@
     }, { threshold: 0 }).observe(form);
   }
 
-  /* ─── Прелоадер ────────────────────────────────────────── */
-  const load = document.getElementById('load');
-  const num = load && load.querySelector('.load__num span');
-  const fill = load && load.querySelector('.load__bar i');
-
-  const startPage = () => {
-    root.classList.remove('is-loading');
-    onScroll();
-    startReveals();
-    startCounters();
-    // Первый экран не ждёт прокрутки: заводим его следующим кадром, чтобы
-    // переходы стартовали уже после снятия шторки и были видны целиком.
-    requestAnimationFrame(() => {
-      document.querySelectorAll('.cover .rv, .cover .mask, .cover [data-split]')
-        .forEach(el => el.classList.add('is-in'));
-    });
-  };
-
-  if (!load || calm) {
-    if (load) load.remove();
-    startPage();
-  } else {
-    root.classList.add('is-loading');
-    requestAnimationFrame(() => load.classList.add('is-boot'));
-
-    const t0 = performance.now();
-    // Короткая шторка: каждая лишняя доля секунды — это пустой экран,
-    // который Lighthouse честно считает в Speed Index.
-    const DUR = 420;
-    const step = now => {
-      const p = clamp01((now - t0) / DUR);
-      const e = 1 - Math.pow(1 - p, 3);
-      if (num) num.textContent = Math.round(e * 100);
-      if (fill) fill.style.transform = `scaleX(${e})`;
-      if (p < 1) { requestAnimationFrame(step); return; }
-
-      load.classList.add('is-done');
-      startPage();
-      load.addEventListener('transitionend', () => load.remove(), { once: true });
-    };
-    requestAnimationFrame(step);
-  }
+  /* ─── Старт ──────────────────────────────────────────── */
+  /* Первый экран заводим сразу же: он не должен ждать прокрутки. Отдельного
+     кадра-заглушки нет намеренно — пустой экран стоит Speed Index. */
+  onScroll();
+  startReveals();
+  startCounters();
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.cover .rv, .cover .mask, .cover [data-split]')
+      .forEach(el => el.classList.add('is-in'));
+  });
 })();
