@@ -130,7 +130,7 @@
 
     if (calm || to === 0) { el.textContent = fmt(to); return; }
 
-    const dur = 1100 + Math.min(to, 60000) / 60000 * 600;
+    const dur = 1100 + Math.min(to, 75000) / 75000 * 600;
     const t0 = performance.now();
     const tick = now => {
       const p = clamp01((now - t0) / dur);
@@ -250,6 +250,30 @@
     initHl();
     startReveals();
     startCounters();
+
+    /* Липкая стопка уместна только когда каждая карточка видна целиком.
+       При длинном уроке оставляем обычный поток, чтобы карточки не перекрывались. */
+    const weeks = document.querySelector('.weeks');
+    if (weeks) {
+      let stackFrame = 0;
+      const syncLessonStack = () => {
+        cancelAnimationFrame(stackFrame);
+        stackFrame = requestAnimationFrame(() => {
+          weeks.classList.remove('can-stack');
+          const barHeight = document.querySelector('.bar')?.offsetHeight || 0;
+          const available = innerHeight - barHeight - 76;
+          const cards = [...weeks.querySelectorAll('.wk')];
+          const maxHeight = Math.max(...cards.map(card => card.getBoundingClientRect().height));
+          weeks.style.setProperty('--lesson-h', `${Math.ceil(maxHeight)}px`);
+          const canStack = innerWidth > 1080 && innerHeight >= 820 &&
+            maxHeight <= available;
+          weeks.classList.toggle('can-stack', canStack);
+        });
+      };
+      syncLessonStack();
+      addEventListener('resize', syncLessonStack);
+      document.fonts?.ready.then(syncLessonStack);
+    }
 
     /* ─── Непрерывный цикл: бегущая строка и наклон по инерции ─ */
     const mq = document.querySelector('.mq');
@@ -404,6 +428,88 @@
       } else {
         spin();
       }
+    }
+
+    /* ─── Маска телефона и отправка заявки ─────────────────── */
+    const leadForm = document.querySelector('.form__r');
+    if (leadForm) {
+      const phone = leadForm.querySelector('[data-mask="phone"]');
+      const name = leadForm.elements.name;
+      const contact = leadForm.elements.contact;
+      const submit = leadForm.querySelector('[type="submit"]');
+      const status = leadForm.querySelector('.form__status');
+
+      const formatPhone = value => {
+        let digits = value.replace(/\D/g, '');
+        if (!digits) return '';
+        if (digits[0] === '8') digits = `7${digits.slice(1)}`;
+        if (digits[0] !== '7') digits = `7${digits}`;
+        digits = digits.slice(0, 11);
+        const local = digits.slice(1);
+        let result = '+7';
+        if (local.length) result += ` (${local.slice(0, 3)}`;
+        if (local.length >= 3) result += ')';
+        if (local.length > 3) result += ` ${local.slice(3, 6)}`;
+        if (local.length > 6) result += `-${local.slice(6, 8)}`;
+        if (local.length > 8) result += `-${local.slice(8, 10)}`;
+        return result;
+      };
+
+      phone.addEventListener('input', () => {
+        phone.value = formatPhone(phone.value);
+        phone.classList.remove('is-invalid');
+      });
+      phone.addEventListener('paste', e => {
+        e.preventDefault();
+        phone.value = formatPhone(e.clipboardData.getData('text'));
+        phone.dispatchEvent(new Event('input'));
+      });
+      [name, contact].forEach(field => field.addEventListener('input', () => {
+        field.classList.remove('is-invalid');
+      }));
+
+      leadForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        status.className = 'form__status';
+        status.textContent = '';
+
+        const phoneValid = phone.value.replace(/\D/g, '').length === 11;
+        const nameValid = name.value.trim().length >= 2;
+        const contactValue = contact.value.trim();
+        const contactValid = !contactValue || /^@[a-zA-Z0-9_]{5,32}$/.test(contactValue) ||
+          /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactValue);
+        phone.classList.toggle('is-invalid', !phoneValid);
+        name.classList.toggle('is-invalid', !nameValid);
+        contact.classList.toggle('is-invalid', !contactValid);
+
+        if (!nameValid || !phoneValid || !contactValid) {
+          status.classList.add('is-error');
+          status.textContent = 'Проверьте заполненные поля';
+          (!nameValid ? name : !phoneValid ? phone : contact).focus();
+          return;
+        }
+
+        submit.disabled = true;
+        submit.textContent = 'Отправляем…';
+        try {
+          const payload = Object.fromEntries(new FormData(leadForm));
+          const response = await fetch('/api/lead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(result.error || 'Не удалось отправить заявку');
+          leadForm.reset();
+          status.textContent = 'Заявка отправлена. Скоро мы с вами свяжемся.';
+        } catch (error) {
+          status.classList.add('is-error');
+          status.textContent = error.message || 'Не удалось отправить заявку. Попробуйте ещё раз.';
+        } finally {
+          submit.disabled = false;
+          submit.textContent = 'Отправить заявку';
+        }
+      });
     }
 
     /* ─── Вопросы ──────────────────────────────────────────── */

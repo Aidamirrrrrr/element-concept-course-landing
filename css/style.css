@@ -280,6 +280,8 @@ html.js [data-split]:not(.is-split){visibility:hidden}
   text-transform:uppercase;color:var(--muted)}
 .wk__t{font-weight:800;font-size:clamp(22px,2.5vw,36px);line-height:1.06;
   letter-spacing:-.03em;margin:10px 0 22px}
+.wk__desc{margin-bottom:22px;color:var(--muted);font-size:15.5px;line-height:1.55}
+.wk__desc p+p{margin-top:12px}
 
 .wk__list{border-top:1px solid var(--line)}
 .wk__list li{position:relative;padding:11px 0 11px 26px;border-bottom:1px solid var(--line);
@@ -288,6 +290,9 @@ html.js [data-split]:not(.is-split){visibility:hidden}
   width:10px;height:10px;border:1.5px solid var(--olive);border-radius:50%;
   transition:background .3s var(--ease)}
 .wk:hover .wk__list li::before{background:var(--olive)}
+@media (min-width:1081px){
+  .wk__list--cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px}
+}
 
 .wk__out{margin-top:22px;padding:16px 18px;background:var(--bone);
   font-size:15.5px;line-height:1.5;color:var(--muted)}
@@ -301,7 +306,8 @@ html.js [data-split]:not(.is-split){visibility:hidden}
    следующая наезжает сверху. Только там, где карточка заведомо ниже экрана. */
 @media (min-width:1081px) and (min-height:820px){
   .weeks{gap:clamp(26px,3vw,44px)}
-  .wk{position:sticky;top:calc(var(--bar-h) + 20px + var(--n,0)*14px)}
+  .weeks.can-stack .wk{position:sticky;min-height:var(--lesson-h);
+    top:calc(var(--bar-h) + 20px + var(--n,0)*14px)}
 }
 
 /* Шторка кадра идёт снизу у одних, сбоку у других — сетка «дышит». */
@@ -372,7 +378,12 @@ html.js [data-split]:not(.is-split){visibility:hidden}
 .tut{background:var(--sand);padding-block:clamp(64px,9vw,132px)}
 .tut__in{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);
   gap:clamp(30px,5vw,80px);align-items:center}
-.tut__img{aspect-ratio:4/5}
+.tut__img{aspect-ratio:4/5;overflow:visible}
+.tut__img .tut__photo{position:absolute;display:block}
+.tut__img .tut__photo--main{inset:0 16% 0 0;width:auto;height:auto}
+.tut__img .tut__photo--accent{inset:auto 0 5% auto;width:48%;height:46%;
+  border:8px solid var(--sand)}
+.tut__img .tut__photo--accent img{object-position:center 30%}
 .tut__txt .h2{margin:14px 0 22px}
 .tut__lead{max-width:52ch;color:var(--muted);font-size:17px}
 .tut__facts{margin-top:clamp(26px,3vw,40px);display:grid;gap:1px;
@@ -452,6 +463,10 @@ html.js [data-split]:not(.is-split){visibility:hidden}
   padding:14px 16px;font:inherit;color:var(--ink);resize:none;transition:border-color .25s}
 .fld input::placeholder,.fld textarea::placeholder{color:#A9AAA2}
 .fld input:focus,.fld textarea:focus{outline:0;border-color:var(--ink)}
+.fld input.is-invalid{border-color:var(--red)}
+.form__status{min-height:1.5em;font-size:14px;color:var(--muted)}
+.form__status.is-error{color:var(--red)}
+.form__r button:disabled{opacity:.6;cursor:wait}
 .form__pd{font-size:12.5px;line-height:1.55;color:var(--muted)}
 @media (max-width:900px){.form__in{grid-template-columns:1fr}}
 

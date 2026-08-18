@@ -3,3 +3,5 @@ __pycache__/
 preview-*.png
 fonts/src/
 .venv/
+node_modules/
+.env
